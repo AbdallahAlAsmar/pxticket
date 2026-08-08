@@ -11,7 +11,6 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "i.imgur.com" },
     ],
   },
-  transpilePackages: ["three"],
 };
 
 export default nextConfig;
