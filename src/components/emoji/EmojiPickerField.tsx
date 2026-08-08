@@ -1,12 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { SmilePlus, X } from "lucide-react";
 import { useGuildEmojis, type GuildEmoji } from "@/lib/swr";
 import {
-  UNICODE_EMOJI_PACK,
+  UNICODE_EMOJI_CATEGORIES,
   customEmojiUrl,
   parseDiscordEmoji,
+  searchUnicodeEmojis,
+  type UnicodeEmojiItem,
 } from "@/lib/emoji";
 import { cn } from "@/lib/utils";
 
@@ -19,7 +21,7 @@ function EmojiPreview({ value }: { value: string }) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src={customEmojiUrl(parsed.id, Boolean(parsed.animated))}
+        src={customEmojiUrl(parsed.id, Boolean(parsed.animated), 64)}
         alt={parsed.name || "emoji"}
         className="h-6 w-6 object-contain"
       />
@@ -44,8 +46,19 @@ export function EmojiPickerField({
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"server" | "unicode">("server");
   const [query, setQuery] = useState("");
+  const [activeCategory, setActiveCategory] = useState(
+    UNICODE_EMOJI_CATEGORIES[0]?.id || "people"
+  );
+  const scrollRef = useRef<HTMLDivElement>(null);
   const { data, isLoading } = useGuildEmojis(open ? guildId : undefined);
   const guildEmojis = data?.emojis || [];
+
+  useEffect(() => {
+    if (!open) {
+      setQuery("");
+      setTab("server");
+    }
+  }, [open]);
 
   const filteredGuild = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -53,12 +66,10 @@ export function EmojiPickerField({
     return guildEmojis.filter((e) => e.name.toLowerCase().includes(q));
   }, [guildEmojis, query]);
 
-  const filteredUnicode = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return UNICODE_EMOJI_PACK;
-    return UNICODE_EMOJI_PACK.filter(
-      (e) => e.label.toLowerCase().includes(q) || e.emoji.includes(q)
-    );
+  const searchResults = useMemo(() => {
+    const q = query.trim();
+    if (!q) return null;
+    return searchUnicodeEmojis(q);
   }, [query]);
 
   function pickGuild(emoji: GuildEmoji) {
@@ -69,6 +80,12 @@ export function EmojiPickerField({
   function pickUnicode(emoji: string) {
     onChange(emoji);
     setOpen(false);
+  }
+
+  function scrollToCategory(categoryId: string) {
+    setActiveCategory(categoryId);
+    const el = document.getElementById(`emoji-cat-${categoryId}`);
+    el?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   return (
@@ -108,7 +125,7 @@ export function EmojiPickerField({
 
       {open ? (
         <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-4 sm:items-center">
-          <div className="flex max-h-[80vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-2xl">
+          <div className="flex max-h-[85vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-2xl">
             <div className="flex items-center justify-between border-b border-line px-4 py-3">
               <p className="font-display text-sm font-semibold text-cream">
                 Choose emoji
@@ -153,12 +170,38 @@ export function EmojiPickerField({
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search…"
+                placeholder={
+                  tab === "server"
+                    ? "Search server emojis…"
+                    : "Search all emojis…"
+                }
                 className="focus-ring w-full rounded-xl border border-line bg-ink px-3 py-2 text-sm text-cream outline-none"
+                autoFocus
               />
             </div>
 
-            <div className="flex-1 overflow-y-auto p-3">
+            {tab === "unicode" && !query.trim() ? (
+              <div className="flex gap-1 overflow-x-auto border-b border-line px-3 py-2">
+                {UNICODE_EMOJI_CATEGORIES.map((cat) => (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    title={cat.name}
+                    onClick={() => scrollToCategory(cat.id)}
+                    className={cn(
+                      "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-lg transition",
+                      activeCategory === cat.id
+                        ? "bg-copper/20"
+                        : "hover:bg-ink"
+                    )}
+                  >
+                    {cat.icon}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+
+            <div ref={scrollRef} className="flex-1 overflow-y-auto p-3">
               {tab === "server" ? (
                 isLoading ? (
                   <p className="p-4 text-center text-sm text-muted">
@@ -169,38 +212,51 @@ export function EmojiPickerField({
                     No custom emojis found on this server.
                   </p>
                 ) : (
-                  <div className="grid grid-cols-6 gap-2 sm:grid-cols-8">
+                  <div className="grid grid-cols-7 gap-1.5 sm:grid-cols-9">
                     {filteredGuild.map((emoji) => (
                       <button
                         key={emoji.id}
                         type="button"
-                        title={emoji.name}
+                        title={`${emoji.name}${emoji.animated ? " (animated)" : ""}`}
                         onClick={() => pickGuild(emoji)}
-                        className="flex h-11 items-center justify-center rounded-xl border border-transparent bg-ink/50 transition hover:border-copper/40 hover:bg-ink"
+                        className="relative flex h-10 items-center justify-center rounded-xl border border-transparent bg-ink/50 transition hover:border-copper/40 hover:bg-ink"
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
-                          src={emoji.url}
+                          src={customEmojiUrl(emoji.id, emoji.animated, 64)}
                           alt={emoji.name}
                           className="h-7 w-7 object-contain"
                           loading="lazy"
                         />
+                        {emoji.animated ? (
+                          <span className="absolute bottom-0.5 right-0.5 rounded bg-ink/90 px-0.5 text-[8px] font-bold uppercase text-copper-bright">
+                            GIF
+                          </span>
+                        ) : null}
                       </button>
                     ))}
                   </div>
                 )
+              ) : searchResults ? (
+                searchResults.length === 0 ? (
+                  <p className="p-4 text-center text-sm text-muted">
+                    No emojis match “{query.trim()}”.
+                  </p>
+                ) : (
+                  <EmojiGrid items={searchResults} onPick={pickUnicode} />
+                )
               ) : (
-                <div className="grid grid-cols-6 gap-2 sm:grid-cols-8">
-                  {filteredUnicode.map((item) => (
-                    <button
-                      key={item.emoji + item.label}
-                      type="button"
-                      title={item.label}
-                      onClick={() => pickUnicode(item.emoji)}
-                      className="flex h-11 items-center justify-center rounded-xl border border-transparent bg-ink/50 text-xl transition hover:border-copper/40 hover:bg-ink"
-                    >
-                      {item.emoji}
-                    </button>
+                <div className="space-y-5">
+                  {UNICODE_EMOJI_CATEGORIES.map((cat) => (
+                    <section key={cat.id} id={`emoji-cat-${cat.id}`}>
+                      <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
+                        {cat.name}
+                      </p>
+                      <EmojiGrid
+                        items={cat.emojis}
+                        onPick={pickUnicode}
+                      />
+                    </section>
                   ))}
                 </div>
               )}
@@ -208,6 +264,30 @@ export function EmojiPickerField({
           </div>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function EmojiGrid({
+  items,
+  onPick,
+}: {
+  items: UnicodeEmojiItem[];
+  onPick: (emoji: string) => void;
+}) {
+  return (
+    <div className="grid grid-cols-7 gap-1.5 sm:grid-cols-9">
+      {items.map((item) => (
+        <button
+          key={item.id}
+          type="button"
+          title={item.label}
+          onClick={() => onPick(item.emoji)}
+          className="flex h-10 items-center justify-center rounded-xl border border-transparent bg-ink/40 text-xl transition hover:border-copper/40 hover:bg-ink"
+        >
+          {item.emoji}
+        </button>
+      ))}
     </div>
   );
 }

@@ -1,3 +1,5 @@
+import data from "@emoji-mart/data";
+
 const CUSTOM_EMOJI_RE = /^<(a)?:([A-Za-z0-9_]{2,32}):(\d{17,20})>$/;
 
 export function parseDiscordEmoji(raw: string | null | undefined): {
@@ -23,62 +25,123 @@ export function parseDiscordEmoji(raw: string | null | undefined): {
   return { kind: "unicode", unicode: input };
 }
 
-export function customEmojiUrl(id: string, animated: boolean) {
-  return `https://cdn.discordapp.com/emojis/${id}.${animated ? "gif" : "png"}?size=48&quality=lossless`;
+/** Always use .gif for animated custom emojis — Discord's default webp URL is a still frame. */
+export function customEmojiUrl(id: string, animated: boolean, size = 48) {
+  const ext = animated ? "gif" : "webp";
+  return `https://cdn.discordapp.com/emojis/${id}.${ext}?size=${size}${
+    animated ? "" : "&quality=lossless"
+  }`;
 }
 
-export function formatCustomEmojiTag(name: string, id: string, animated: boolean) {
+export function formatCustomEmojiTag(
+  name: string,
+  id: string,
+  animated: boolean
+) {
   return `<${animated ? "a" : ""}:${name}:${id}>`;
 }
 
-/** Common Discord-style unicode set (mirrors ticket_bot fallback + extras). */
-export const UNICODE_EMOJI_PACK: Array<{ emoji: string; label: string }> = [
-  { emoji: "🎫", label: "Ticket" },
-  { emoji: "🎟", label: "Admission" },
-  { emoji: "✅", label: "Check" },
-  { emoji: "❌", label: "Cross" },
-  { emoji: "⚠️", label: "Warning" },
-  { emoji: "📋", label: "Clipboard" },
-  { emoji: "💬", label: "Speech" },
-  { emoji: "📝", label: "Memo" },
-  { emoji: "🔔", label: "Bell" },
-  { emoji: "👋", label: "Wave" },
-  { emoji: "💰", label: "Money" },
-  { emoji: "🎁", label: "Gift" },
-  { emoji: "🛍️", label: "Bags" },
-  { emoji: "💳", label: "Card" },
-  { emoji: "📞", label: "Phone" },
-  { emoji: "📧", label: "Email" },
-  { emoji: "🐛", label: "Bug" },
-  { emoji: "🔐", label: "Lock" },
-  { emoji: "⏰", label: "Alarm" },
-  { emoji: "📊", label: "Chart" },
-  { emoji: "🌟", label: "Star" },
-  { emoji: "💡", label: "Idea" },
-  { emoji: "🚀", label: "Rocket" },
-  { emoji: "🎯", label: "Target" },
-  { emoji: "🛠️", label: "Tools" },
-  { emoji: "📦", label: "Package" },
-  { emoji: "🧾", label: "Receipt" },
-  { emoji: "🧑‍💻", label: "Technologist" },
-  { emoji: "👮", label: "Officer" },
-  { emoji: "🛡️", label: "Shield" },
-  { emoji: "🔥", label: "Fire" },
-  { emoji: "❤️", label: "Heart" },
-  { emoji: "🟣", label: "Purple" },
-  { emoji: "🔵", label: "Blue" },
-  { emoji: "🟢", label: "Green" },
-  { emoji: "🟡", label: "Yellow" },
-  { emoji: "🟠", label: "Orange" },
-  { emoji: "⚪", label: "White" },
-  { emoji: "⚫", label: "Black" },
-  { emoji: "1️⃣", label: "One" },
-  { emoji: "2️⃣", label: "Two" },
-  { emoji: "3️⃣", label: "Three" },
-  { emoji: "❓", label: "Question" },
-  { emoji: "‼️", label: "Bangbang" },
-  { emoji: "📌", label: "Pin" },
-  { emoji: "🧭", label: "Compass" },
-  { emoji: "🏠", label: "Home" },
-  { emoji: "🏪", label: "Store" },
-];
+export type UnicodeEmojiItem = {
+  id: string;
+  emoji: string;
+  label: string;
+  keywords: string[];
+};
+
+export type UnicodeEmojiCategory = {
+  id: string;
+  name: string;
+  icon: string;
+  emojis: UnicodeEmojiItem[];
+};
+
+const CATEGORY_META: Record<string, { name: string; icon: string }> = {
+  people: { name: "Smileys & People", icon: "😀" },
+  nature: { name: "Animals & Nature", icon: "🐻" },
+  foods: { name: "Food & Drink", icon: "🍔" },
+  activity: { name: "Activity", icon: "⚽" },
+  places: { name: "Travel & Places", icon: "✈️" },
+  objects: { name: "Objects", icon: "💡" },
+  symbols: { name: "Symbols", icon: "🔣" },
+  flags: { name: "Flags", icon: "🚩" },
+};
+
+type MartEmoji = {
+  id: string;
+  name: string;
+  keywords?: string[];
+  skins: Array<{ native: string }>;
+};
+
+type MartData = {
+  categories: Array<{ id: string; emojis: string[] }>;
+  emojis: Record<string, MartEmoji>;
+};
+
+const mart = data as unknown as MartData;
+
+function buildUnicodeCategories(): UnicodeEmojiCategory[] {
+  return mart.categories
+    .filter((cat) => CATEGORY_META[cat.id])
+    .map((cat) => {
+      const meta = CATEGORY_META[cat.id];
+      const emojis: UnicodeEmojiItem[] = [];
+      for (const emojiId of cat.emojis) {
+        const entry = mart.emojis[emojiId];
+        if (!entry?.skins?.[0]?.native) continue;
+        emojis.push({
+          id: entry.id,
+          emoji: entry.skins[0].native,
+          label: entry.name,
+          keywords: entry.keywords || [],
+        });
+      }
+      return {
+        id: cat.id,
+        name: meta.name,
+        icon: meta.icon,
+        emojis,
+      };
+    })
+    .filter((cat) => cat.emojis.length > 0);
+}
+
+/** Full Discord-style unicode set (~1800+), grouped like Discord / emoji-mart. */
+export const UNICODE_EMOJI_CATEGORIES = buildUnicodeCategories();
+
+export const UNICODE_EMOJI_PACK: UnicodeEmojiItem[] =
+  UNICODE_EMOJI_CATEGORIES.flatMap((c) => c.emojis);
+
+export function searchUnicodeEmojis(
+  query: string,
+  limit = 300
+): UnicodeEmojiItem[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return UNICODE_EMOJI_PACK;
+  const scored: Array<{ item: UnicodeEmojiItem; score: number }> = [];
+  for (const item of UNICODE_EMOJI_PACK) {
+    const id = item.id.toLowerCase();
+    const label = item.label.toLowerCase();
+    if (item.emoji === q) {
+      scored.push({ item, score: 0 });
+      continue;
+    }
+    if (id === q || label === q) {
+      scored.push({ item, score: 1 });
+      continue;
+    }
+    if (id.startsWith(q) || label.startsWith(q)) {
+      scored.push({ item, score: 2 });
+      continue;
+    }
+    if (
+      id.includes(q) ||
+      label.includes(q) ||
+      item.keywords.some((k) => k.toLowerCase().includes(q))
+    ) {
+      scored.push({ item, score: 3 });
+    }
+  }
+  scored.sort((a, b) => a.score - b.score);
+  return scored.slice(0, limit).map((s) => s.item);
+}
