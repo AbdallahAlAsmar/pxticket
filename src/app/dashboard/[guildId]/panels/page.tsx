@@ -1,37 +1,38 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Plus, Power, Send } from "lucide-react";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { Card, PrimaryButton, GhostButton } from "@/components/ui/forms";
+import { PanelRowSkeleton } from "@/components/ui/skeleton";
+import { invalidateGuild, seedFromBootstrap, useGuildBootstrap, useGuildPanels } from "@/lib/swr";
+import { useEffect, useState } from "react";
 import type { TicketPanel } from "@/lib/types";
+import { mutate } from "swr";
 
 export default function PanelsPage() {
   const params = useParams();
   const guildId = String(params.guildId);
-  const [guildName, setGuildName] = useState("");
-  const [panels, setPanels] = useState<TicketPanel[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const { data: bootstrap } = useGuildBootstrap(guildId);
+  const { data, error, isLoading } = useGuildPanels(guildId);
+  const panels = data?.panels || bootstrap?.panels || [];
+  const guildName = bootstrap?.guild?.name || "";
   const [busyId, setBusyId] = useState<string | null>(null);
-
-  async function load() {
-    const [guild, list] = await Promise.all([
-      fetch(`/api/bot/guilds/${guildId}`).then((r) => r.json()),
-      fetch(`/api/bot/guilds/${guildId}/panels`).then((r) => r.json()),
-    ]);
-    if (guild.guild) setGuildName(guild.guild.name);
-    if (list.error) setError(list.error);
-    else setPanels(list.panels || []);
-  }
+  const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
-    load();
-  }, [guildId]);
+    if (bootstrap) seedFromBootstrap(guildId, bootstrap);
+  }, [bootstrap, guildId]);
+
+  async function refreshPanels() {
+    await mutate(`/api/bot/guilds/${guildId}/panels`);
+    await invalidateGuild(guildId);
+  }
 
   async function toggle(panel: TicketPanel) {
     setBusyId(panel.id);
+    setActionError(null);
     try {
       const res = await fetch(
         `/api/bot/guilds/${guildId}/panels/${panel.id}/status`,
@@ -41,13 +42,11 @@ export default function PanelsPage() {
           body: JSON.stringify({ enabled: !panel.enabled }),
         }
       );
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      setPanels((prev) =>
-        prev.map((p) => (p.id === panel.id ? data.panel : p))
-      );
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      await refreshPanels();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed");
+      setActionError(err instanceof Error ? err.message : "Failed");
     } finally {
       setBusyId(null);
     }
@@ -55,19 +54,17 @@ export default function PanelsPage() {
 
   async function publish(panel: TicketPanel) {
     setBusyId(panel.id);
-    setError(null);
+    setActionError(null);
     try {
       const res = await fetch(
         `/api/bot/guilds/${guildId}/panels/${panel.id}/publish`,
         { method: "POST" }
       );
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      setPanels((prev) =>
-        prev.map((p) => (p.id === panel.id ? data.panel : p))
-      );
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      await refreshPanels();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Publish failed");
+      setActionError(err instanceof Error ? err.message : "Publish failed");
     } finally {
       setBusyId(null);
     }
@@ -90,13 +87,19 @@ export default function PanelsPage() {
         </Link>
       </div>
 
-      {error ? (
+      {actionError || error ? (
         <p className="mb-4 rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm">
-          {error}
+          {actionError || (error instanceof Error ? error.message : "Failed to load")}
         </p>
       ) : null}
 
-      {panels.length === 0 ? (
+      {isLoading && !panels.length ? (
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <PanelRowSkeleton key={i} />
+          ))}
+        </div>
+      ) : panels.length === 0 ? (
         <Card className="p-10 text-center">
           <p className="font-medium text-cream">No panels yet</p>
           <p className="mt-2 text-sm text-muted">

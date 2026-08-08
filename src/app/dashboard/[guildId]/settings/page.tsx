@@ -11,34 +11,43 @@ import {
   PrimaryButton,
   GhostButton,
 } from "@/components/ui/forms";
-import type { ChannelInfo, GuildSettings, RoleInfo } from "@/lib/types";
+import { EmojiPickerField } from "@/components/emoji/EmojiPickerField";
+import { FormSkeleton } from "@/components/ui/skeleton";
+import type { GuildSettings } from "@/lib/types";
+import {
+  invalidateGuild,
+  seedFromBootstrap,
+  useGuildBootstrap,
+} from "@/lib/swr";
 
 export default function SettingsPage() {
   const params = useParams();
   const guildId = String(params.guildId);
-  const [guildName, setGuildName] = useState("");
+  const { data: bootstrap, error: bootError, isLoading } =
+    useGuildBootstrap(guildId);
+
   const [settings, setSettings] = useState<GuildSettings | null>(null);
-  const [channels, setChannels] = useState<ChannelInfo[]>([]);
-  const [roles, setRoles] = useState<RoleInfo[]>([]);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([
-      fetch(`/api/bot/guilds/${guildId}`).then((r) => r.json()),
-      fetch(`/api/bot/guilds/${guildId}/channels`).then((r) => r.json()),
-      fetch(`/api/bot/guilds/${guildId}/roles`).then((r) => r.json()),
-    ]).then(([guild, ch, rl]) => {
-      if (guild.error) setError(guild.error);
-      else {
-        setGuildName(guild.guild?.name || "");
-        setSettings(guild.settings);
-      }
-      setChannels(ch.channels || []);
-      setRoles(rl.roles || []);
-    });
-  }, [guildId]);
+    if (!bootstrap) return;
+    seedFromBootstrap(guildId, bootstrap);
+    setSettings(bootstrap.settings);
+  }, [bootstrap, guildId]);
+
+  useEffect(() => {
+    if (bootError) {
+      setError(
+        bootError instanceof Error ? bootError.message : "Failed to load"
+      );
+    }
+  }, [bootError]);
+
+  const channels = bootstrap?.channels || [];
+  const roles = bootstrap?.roles || [];
+  const guildName = bootstrap?.guild?.name || "";
 
   const textChannels = useMemo(
     () => channels.filter((c) => c.type === 0 || c.type === 5),
@@ -59,6 +68,7 @@ export default function SettingsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Save failed");
       setSettings(data.settings);
+      await invalidateGuild(guildId);
       setMessage("Settings saved.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
@@ -77,6 +87,8 @@ export default function SettingsPage() {
         : [...settings.supportRoleIds, roleId],
     });
   }
+
+  const loading = isLoading && !settings;
 
   return (
     <DashboardShell guildId={guildId} guildName={guildName}>
@@ -103,8 +115,15 @@ export default function SettingsPage() {
         </p>
       ) : null}
 
-      {!settings ? (
-        <div className="h-40 animate-pulse rounded-2xl bg-surface" />
+      {loading ? (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <FormSkeleton />
+          <FormSkeleton />
+        </div>
+      ) : !settings ? (
+        <Card className="p-10 text-center text-sm text-muted">
+          Could not load settings.
+        </Card>
       ) : (
         <div className="grid gap-6 lg:grid-cols-2">
           <Card className="space-y-5 p-6">
@@ -192,28 +211,28 @@ export default function SettingsPage() {
               />
             </Field>
             <div className="grid grid-cols-2 gap-4">
-              <Field label="Open emoji">
-                <TextInput
-                  value={settings.emojis.open}
-                  onChange={(e) =>
-                    setSettings({
-                      ...settings,
-                      emojis: { ...settings.emojis, open: e.target.value },
-                    })
-                  }
-                />
-              </Field>
-              <Field label="Claimed emoji">
-                <TextInput
-                  value={settings.emojis.claimed}
-                  onChange={(e) =>
-                    setSettings({
-                      ...settings,
-                      emojis: { ...settings.emojis, claimed: e.target.value },
-                    })
-                  }
-                />
-              </Field>
+              <EmojiPickerField
+                guildId={guildId}
+                label="Open emoji"
+                value={settings.emojis.open}
+                onChange={(next) =>
+                  setSettings({
+                    ...settings,
+                    emojis: { ...settings.emojis, open: next || "🎫" },
+                  })
+                }
+              />
+              <EmojiPickerField
+                guildId={guildId}
+                label="Claimed emoji"
+                value={settings.emojis.claimed}
+                onChange={(next) =>
+                  setSettings({
+                    ...settings,
+                    emojis: { ...settings.emojis, claimed: next || "🎟" },
+                  })
+                }
+              />
             </div>
           </Card>
 

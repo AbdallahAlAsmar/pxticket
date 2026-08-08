@@ -1,5 +1,11 @@
 import { auth } from "@/lib/auth";
 import { botFetch, BotApiError, fetchUserGuilds } from "@/lib/bot-api";
+import {
+  getCached,
+  invalidateCachePrefix,
+  rateLimit,
+  setCached,
+} from "@/lib/rate-limit";
 import { hasGuildAdmin } from "@/lib/utils";
 import { NextResponse } from "next/server";
 
@@ -15,12 +21,11 @@ async function assertCanManage(
       if (g && (g.owner || hasGuildAdmin(g.permissions))) {
         return true;
       }
-      // User is in Discord guild list but lacks admin — deny without bot roundtrip.
       if (g) {
         return false;
       }
     } catch {
-      // Fall through to bot membership check when Discord OAuth token is stale.
+      // Fall through when Discord OAuth token is stale.
     }
   }
 
@@ -74,6 +79,14 @@ export async function DELETE(
   return proxy(ctx, "DELETE", req);
 }
 
+function cacheTtlForPath(botPath: string) {
+  if (botPath.endsWith("/emojis")) return 120_000;
+  if (botPath.endsWith("/channels") || botPath.endsWith("/roles")) return 60_000;
+  if (botPath.endsWith("/bootstrap")) return 20_000;
+  if (botPath === "/guilds") return 20_000;
+  return 12_000;
+}
+
 async function proxy(
   ctx: { params: Promise<{ path: string[] }> },
   method: string,
@@ -85,12 +98,34 @@ async function proxy(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const limited = rateLimit(`user:${session.user.id}`, 90, 60_000);
+    if (!limited.ok) {
+      return NextResponse.json(
+        {
+          error: "Too many requests. Slow down and try again shortly.",
+          retryAfter: limited.retryAfter,
+        },
+        {
+          status: 429,
+          headers: { "Retry-After": String(limited.retryAfter) },
+        }
+      );
+    }
+
     const { path } = await ctx.params;
     const segments = path || [];
     const botPath = `/${segments.join("/")}`;
 
     // Special: merge Discord user guilds with bot guilds
     if (method === "GET" && segments.length === 1 && segments[0] === "guilds") {
+      const cacheKey = `guilds-list:${session.user.id}`;
+      const cached = getCached(cacheKey);
+      if (cached) {
+        return NextResponse.json(cached.body, {
+          headers: { "X-Cache": "HIT" },
+        });
+      }
+
       const [botData, userGuilds] = await Promise.all([
         botFetch<{
           guilds: Array<{
@@ -110,7 +145,6 @@ async function proxy(
         (g) => botIds.has(g.id) && (g.owner || hasGuildAdmin(g.permissions))
       );
 
-      // If Discord OAuth guilds failed/empty, fall back to bot can-manage checks.
       let guilds = manageable.map((g) => {
         const botGuild = botData.guilds.find((b) => b.id === g.id);
         return {
@@ -148,7 +182,9 @@ async function proxy(
         }));
       }
 
-      return NextResponse.json({ guilds });
+      const payload = { guilds };
+      setCached(cacheKey, payload, 200, 20_000);
+      return NextResponse.json(payload, { headers: { "X-Cache": "MISS" } });
     }
 
     const guildId =
@@ -167,15 +203,35 @@ async function proxy(
       }
     }
 
+    if (method === "GET") {
+      const cacheKey = `get:${session.user.id}:${botPath}`;
+      const cached = getCached(cacheKey);
+      if (cached) {
+        return NextResponse.json(cached.body, {
+          headers: { "X-Cache": "HIT" },
+        });
+      }
+
+      const data = await botFetch(botPath, { method: "GET" });
+      setCached(cacheKey, data, 200, cacheTtlForPath(botPath));
+      return NextResponse.json(data, { headers: { "X-Cache": "MISS" } });
+    }
+
     const body =
-      req && method !== "GET" && method !== "DELETE"
-        ? await req.text()
-        : undefined;
+      req && method !== "DELETE" ? await req.text() : undefined;
 
     const data = await botFetch(botPath, {
       method,
       body: body || undefined,
     });
+
+    // Mutations invalidate cached reads for that guild / global list.
+    if (guildId) {
+      invalidateCachePrefix(`get:${session.user.id}:/guilds/${guildId}`);
+    }
+    invalidateCachePrefix(`guilds-list:${session.user.id}`);
+    invalidateCachePrefix(`get:${session.user.id}:/guilds`);
+
     return NextResponse.json(data);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Proxy error";

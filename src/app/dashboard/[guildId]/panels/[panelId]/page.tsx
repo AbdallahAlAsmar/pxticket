@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Plus, Trash2, Send, Save } from "lucide-react";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { DiscordEmbedPreview } from "@/components/embed/DiscordEmbedPreview";
+import { EmojiPickerField } from "@/components/emoji/EmojiPickerField";
 import {
   Card,
   Field,
@@ -14,7 +15,15 @@ import {
   PrimaryButton,
   GhostButton,
 } from "@/components/ui/forms";
-import type { ChannelInfo, PanelCategory, RoleInfo, TicketPanel } from "@/lib/types";
+import { FormSkeleton } from "@/components/ui/skeleton";
+import type { PanelCategory, TicketPanel } from "@/lib/types";
+import {
+  invalidateGuild,
+  seedFromBootstrap,
+  useGuildBootstrap,
+  useTicketPanel,
+} from "@/lib/swr";
+import { mutate } from "swr";
 
 const emptyPanel = (): Partial<TicketPanel> => ({
   name: "New Panel",
@@ -49,34 +58,46 @@ export default function PanelEditorPage() {
   const panelId = String(params.panelId);
   const isNew = panelId === "new";
 
-  const [guildName, setGuildName] = useState("");
+  const { data: bootstrap, isLoading: bootLoading } = useGuildBootstrap(guildId);
+  const { data: panelData, isLoading: panelLoading, error: panelError } =
+    useTicketPanel(guildId, panelId);
+
   const [panel, setPanel] = useState<Partial<TicketPanel>>(emptyPanel());
-  const [channels, setChannels] = useState<ChannelInfo[]>([]);
-  const [roles, setRoles] = useState<RoleInfo[]>([]);
+  const [hydrated, setHydrated] = useState(isNew);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function load() {
-      const [guild, ch, rl] = await Promise.all([
-        fetch(`/api/bot/guilds/${guildId}`).then((r) => r.json()),
-        fetch(`/api/bot/guilds/${guildId}/channels`).then((r) => r.json()),
-        fetch(`/api/bot/guilds/${guildId}/roles`).then((r) => r.json()),
-      ]);
-      setGuildName(guild.guild?.name || "");
-      setChannels(ch.channels || []);
-      setRoles(rl.roles || []);
+  const channels = bootstrap?.channels || [];
+  const roles = bootstrap?.roles || [];
+  const guildName = bootstrap?.guild?.name || "";
 
-      if (!isNew) {
-        const res = await fetch(`/api/bot/guilds/${guildId}/panels/${panelId}`);
-        const data = await res.json();
-        if (!res.ok) setError(data.error || "Panel not found");
-        else setPanel(data.panel);
-      }
+  useEffect(() => {
+    if (isNew) {
+      setHydrated(true);
+      return;
     }
-    load();
-  }, [guildId, panelId, isNew]);
+    // Prefer dedicated panel fetch; fall back to bootstrap list for faster first paint.
+    const fromFetch = panelData?.panel;
+    const fromBootstrap = bootstrap?.panels?.find((p) => p.id === panelId);
+    const next = fromFetch || fromBootstrap;
+    if (next) {
+      setPanel(next);
+      setHydrated(true);
+    }
+  }, [isNew, panelData, bootstrap, panelId]);
+
+  useEffect(() => {
+    if (panelError) {
+      setError(panelError instanceof Error ? panelError.message : "Panel not found");
+    }
+  }, [panelError]);
+
+  // Warm related SWR keys from bootstrap so other pages feel instant.
+  useEffect(() => {
+    if (!bootstrap) return;
+    seedFromBootstrap(guildId, bootstrap);
+  }, [bootstrap, guildId]);
 
   const textChannels = useMemo(
     () => channels.filter((c) => c.type === 0 || c.type === 5),
@@ -86,6 +107,10 @@ export default function PanelEditorPage() {
     () => channels.filter((c) => c.type === 4),
     [channels]
   );
+
+  const loading =
+    (!isNew && !hydrated && (bootLoading || panelLoading)) ||
+    (bootLoading && !bootstrap);
 
   function updateCategory(index: number, patch: Partial<PanelCategory>) {
     const next = [...(panel.categories || [])];
@@ -162,6 +187,7 @@ export default function PanelEditorPage() {
         if (!res.ok) throw new Error(data.error || "Create failed");
         savedId = data.panel.id;
         setPanel(data.panel);
+        await invalidateGuild(guildId);
         router.replace(`/dashboard/${guildId}/panels/${savedId}`);
       } else {
         const res = await fetch(`/api/bot/guilds/${guildId}/panels/${panelId}`, {
@@ -172,6 +198,8 @@ export default function PanelEditorPage() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Save failed");
         setPanel(data.panel);
+        await invalidateGuild(guildId);
+        await mutate(`/api/bot/guilds/${guildId}/panels/${panelId}`);
       }
 
       if (andPublish) {
@@ -182,6 +210,7 @@ export default function PanelEditorPage() {
         const pubData = await pub.json();
         if (!pub.ok) throw new Error(pubData.error || "Publish failed");
         setPanel(pubData.panel);
+        await invalidateGuild(guildId);
         setMessage("Saved and published to Discord.");
       } else {
         setMessage("Panel saved.");
@@ -242,6 +271,15 @@ export default function PanelEditorPage() {
         </p>
       ) : null}
 
+      {loading ? (
+        <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+          <div className="space-y-6">
+            <FormSkeleton />
+            <FormSkeleton />
+          </div>
+          <FormSkeleton />
+        </div>
+      ) : (
       <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <div className="space-y-6">
           <Card className="space-y-4 p-6">
@@ -422,23 +460,21 @@ export default function PanelEditorPage() {
                           }
                         />
                       </Field>
-                      <Field label="Emoji">
-                        <TextInput
-                          value={cat.emoji || ""}
-                          onChange={(e) =>
-                            updateCategory(index, { emoji: e.target.value })
-                          }
-                          placeholder="🎫 or <:name:id>"
-                        />
-                      </Field>
-                      <Field label="Channel emoji">
-                        <TextInput
-                          value={cat.channelEmoji || ""}
-                          onChange={(e) =>
-                            updateCategory(index, { channelEmoji: e.target.value })
-                          }
-                        />
-                      </Field>
+                      <EmojiPickerField
+                        guildId={guildId}
+                        label="Emoji"
+                        value={cat.emoji || ""}
+                        onChange={(next) => updateCategory(index, { emoji: next })}
+                        hint="Server custom emojis first, then standard Discord emojis."
+                      />
+                      <EmojiPickerField
+                        guildId={guildId}
+                        label="Channel emoji"
+                        value={cat.channelEmoji || ""}
+                        onChange={(next) =>
+                          updateCategory(index, { channelEmoji: next })
+                        }
+                      />
                       <Field label="Support role">
                         <SelectInput
                           value={cat.supportRoleId || cat.supportRoleIds?.[0] || ""}
@@ -526,6 +562,7 @@ export default function PanelEditorPage() {
           />
         </div>
       </div>
+      )}
     </DashboardShell>
   );
 }

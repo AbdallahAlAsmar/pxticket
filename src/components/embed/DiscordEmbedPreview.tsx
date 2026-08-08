@@ -1,6 +1,7 @@
 "use client";
 
 import { normalizeHex } from "@/lib/utils";
+import { customEmojiUrl, parseDiscordEmoji } from "@/lib/emoji";
 
 export type EmbedPreviewProps = {
   authorName?: string | null;
@@ -13,6 +14,24 @@ export type EmbedPreviewProps = {
   footerIcon?: string;
   categories?: { name: string; emoji?: string | null }[];
 };
+
+function CategoryEmoji({ raw }: { raw?: string | null }) {
+  const parsed = parseDiscordEmoji(raw);
+  if (parsed.kind === "custom" && parsed.id) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={customEmojiUrl(parsed.id, Boolean(parsed.animated))}
+        alt=""
+        className="mr-2 inline-block h-4 w-4 align-[-2px] object-contain"
+      />
+    );
+  }
+  if (parsed.kind === "unicode" && parsed.unicode) {
+    return <span className="mr-2">{parsed.unicode}</span>;
+  }
+  return null;
+}
 
 export function DiscordEmbedPreview({
   authorName,
@@ -98,9 +117,9 @@ export function DiscordEmbedPreview({
               {categories.slice(0, 8).map((cat) => (
                 <div
                   key={cat.name}
-                  className="border-b border-[#1e1f22] px-3 py-2 text-[#dbdee1] last:border-0"
+                  className="flex items-center border-b border-[#1e1f22] px-3 py-2 text-[#dbdee1] last:border-0"
                 >
-                  {cat.emoji ? <span className="mr-2">{cat.emoji}</span> : null}
+                  <CategoryEmoji raw={cat.emoji} />
                   {cat.name}
                 </div>
               ))}

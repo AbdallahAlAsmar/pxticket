@@ -1,37 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Server, AlertCircle, RefreshCw } from "lucide-react";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
-import { discordIconUrl } from "@/lib/utils";
-import type { GuildSummary } from "@/lib/types";
+import { ServerCardSkeleton } from "@/components/ui/skeleton";
 import { GhostButton } from "@/components/ui/forms";
+import { discordIconUrl } from "@/lib/utils";
+import { useGuilds } from "@/lib/swr";
+import { mutate } from "swr";
 
 export default function DashboardPage() {
-  const [guilds, setGuilds] = useState<GuildSummary[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data, error, isLoading, isValidating } = useGuilds();
+  const guilds = data?.guilds || [];
 
-  async function load() {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/bot/guilds");
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to load servers");
-      setGuilds(data.guilds || []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load");
-    } finally {
-      setLoading(false);
-    }
+  async function refresh() {
+    await mutate("/api/bot/guilds");
   }
-
-  useEffect(() => {
-    load();
-  }, []);
 
   return (
     <DashboardShell>
@@ -42,16 +27,16 @@ export default function DashboardPage() {
             Servers where you have Manage Server and PX Ticket is online.
           </p>
         </div>
-        <GhostButton type="button" onClick={load}>
-          <RefreshCw className="h-4 w-4" />
+        <GhostButton type="button" onClick={refresh} disabled={isValidating}>
+          <RefreshCw className={`h-4 w-4 ${isValidating ? "animate-spin" : ""}`} />
           Refresh
         </GhostButton>
       </div>
 
-      {loading ? (
+      {isLoading && !data ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-28 animate-pulse rounded-2xl bg-surface" />
+            <ServerCardSkeleton key={i} />
           ))}
         </div>
       ) : error ? (
@@ -59,10 +44,8 @@ export default function DashboardPage() {
           <AlertCircle className="mt-0.5 h-5 w-5 text-danger" />
           <div>
             <p className="font-medium">Could not reach the bot API</p>
-            <p className="mt-1 text-muted">{error}</p>
-            <p className="mt-2 text-xs text-muted">
-              Make sure the ticket bot is running with DASHBOARD_API_SECRET set, and
-              BOT_API_URL / BOT_API_SECRET match in Vercel.
+            <p className="mt-1 text-muted">
+              {error instanceof Error ? error.message : "Failed to load"}
             </p>
           </div>
         </div>
@@ -83,7 +66,7 @@ export default function DashboardPage() {
                 key={guild.id}
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05 }}
+                transition={{ delay: i * 0.04 }}
               >
                 <Link
                   href={`/dashboard/${guild.id}`}

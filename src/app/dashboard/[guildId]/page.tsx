@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { motion } from "framer-motion";
@@ -13,23 +12,18 @@ import {
 } from "lucide-react";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { Card } from "@/components/ui/forms";
-import type { GuildDetail } from "@/lib/types";
+import { StatsSkeleton } from "@/components/ui/skeleton";
+import { seedFromBootstrap, useGuildBootstrap } from "@/lib/swr";
+import { useEffect } from "react";
 
 export default function GuildOverviewPage() {
   const params = useParams();
   const guildId = String(params.guildId);
-  const [data, setData] = useState<GuildDetail | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { data, error, isLoading } = useGuildBootstrap(guildId);
 
   useEffect(() => {
-    fetch(`/api/bot/guilds/${guildId}`)
-      .then(async (res) => {
-        const json = await res.json();
-        if (!res.ok) throw new Error(json.error || "Failed");
-        setData(json);
-      })
-      .catch((err) => setError(err.message));
-  }, [guildId]);
+    if (data) seedFromBootstrap(guildId, data);
+  }, [data, guildId]);
 
   const stats = [
     {
@@ -83,7 +77,7 @@ export default function GuildOverviewPage() {
     <DashboardShell guildId={guildId} guildName={data?.guild.name}>
       <div className="mb-8">
         <h1 className="font-display text-3xl font-bold text-cream">
-          {data?.guild.name || "Server"}
+          {data?.guild.name || (isLoading ? "Loading…" : "Server")}
         </h1>
         <p className="mt-2 text-sm text-muted">
           Overview of ticket activity and quick jumps into configuration.
@@ -91,29 +85,37 @@ export default function GuildOverviewPage() {
       </div>
 
       {error ? (
-        <p className="rounded-xl border border-danger/30 bg-danger/10 p-4 text-sm text-cream">
-          {error}
+        <p className="mb-4 rounded-xl border border-danger/30 bg-danger/10 p-4 text-sm text-cream">
+          {error instanceof Error ? error.message : "Failed to load"}
         </p>
       ) : null}
 
-      <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat, i) => (
-          <motion.div
-            key={stat.label}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.05 }}
-          >
-            <Card className="p-5">
-              <div className="flex items-center justify-between">
-                <p className="text-xs uppercase tracking-wider text-muted">{stat.label}</p>
-                <stat.icon className={`h-4 w-4 ${stat.color}`} />
-              </div>
-              <p className="mt-3 font-display text-3xl font-bold text-cream">{stat.value}</p>
-            </Card>
-          </motion.div>
-        ))}
-      </div>
+      {isLoading && !data ? (
+        <StatsSkeleton />
+      ) : (
+        <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {stats.map((stat, i) => (
+            <motion.div
+              key={stat.label}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.05 }}
+            >
+              <Card className="p-5">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs uppercase tracking-wider text-muted">
+                    {stat.label}
+                  </p>
+                  <stat.icon className={`h-4 w-4 ${stat.color}`} />
+                </div>
+                <p className="mt-3 font-display text-3xl font-bold text-cream">
+                  {stat.value}
+                </p>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
+      )}
 
       <div className="grid gap-4 md:grid-cols-3">
         {links.map((link) => (
