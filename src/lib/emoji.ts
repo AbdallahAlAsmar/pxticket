@@ -25,12 +25,30 @@ export function parseDiscordEmoji(raw: string | null | undefined): {
   return { kind: "unicode", unicode: input };
 }
 
-/** Always use .gif for animated custom emojis — Discord's default webp URL is a still frame. */
+/**
+ * Candidate CDN URLs for a custom emoji.
+ * Discord serves animated as webp?animated=true (preferred) or gif; static as webp/png.
+ */
+export function customEmojiUrlCandidates(
+  id: string,
+  animated: boolean,
+  size = 64
+): string[] {
+  if (animated) {
+    return [
+      `https://cdn.discordapp.com/emojis/${id}.webp?size=${size}&animated=true`,
+      `https://cdn.discordapp.com/emojis/${id}.gif?size=${size}`,
+      `https://cdn.discordapp.com/emojis/${id}.png?size=${size}`,
+    ];
+  }
+  return [
+    `https://cdn.discordapp.com/emojis/${id}.webp?size=${size}&quality=lossless`,
+    `https://cdn.discordapp.com/emojis/${id}.png?size=${size}`,
+  ];
+}
+
 export function customEmojiUrl(id: string, animated: boolean, size = 48) {
-  const ext = animated ? "gif" : "webp";
-  return `https://cdn.discordapp.com/emojis/${id}.${ext}?size=${size}${
-    animated ? "" : "&quality=lossless"
-  }`;
+  return customEmojiUrlCandidates(id, animated, size)[0];
 }
 
 export function formatCustomEmojiTag(
@@ -39,6 +57,19 @@ export function formatCustomEmojiTag(
   animated: boolean
 ) {
   return `<${animated ? "a" : ""}:${name}:${id}>`;
+}
+
+/** Prefetch custom emoji images into the browser HTTP cache. */
+export function prefetchCustomEmojis(
+  emojis: Array<{ id: string; animated: boolean }>
+) {
+  if (typeof window === "undefined") return;
+  for (const emoji of emojis) {
+    const url = customEmojiUrl(emoji.id, emoji.animated, 64);
+    const img = new Image();
+    img.decoding = "async";
+    img.src = url;
+  }
 }
 
 export type UnicodeEmojiItem = {

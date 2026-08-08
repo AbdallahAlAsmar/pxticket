@@ -80,7 +80,7 @@ export async function DELETE(
 }
 
 function cacheTtlForPath(botPath: string) {
-  if (botPath.endsWith("/emojis")) return 120_000;
+  if (botPath.endsWith("/emojis")) return 600_000; // 10 min — emojis rarely change
   if (botPath.endsWith("/channels") || botPath.endsWith("/roles")) return 60_000;
   if (botPath.endsWith("/bootstrap")) return 20_000;
   if (botPath === "/guilds") return 20_000;

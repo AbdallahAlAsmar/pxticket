@@ -114,7 +114,11 @@ export function useGuildEmojis(guildId: string | undefined) {
   return useSWR<{ emojis: GuildEmoji[] }>(
     guildId ? `/api/bot/guilds/${guildId}/emojis` : null,
     fetcher,
-    { revalidateOnFocus: false, dedupingInterval: 120_000 }
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 300_000,
+      revalidateIfStale: false,
+    }
   );
 }
 
