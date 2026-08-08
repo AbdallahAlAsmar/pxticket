@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { signIn, useSession } from "next-auth/react";
 import { LayoutDashboard, Menu, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
 const links = [
@@ -15,10 +15,25 @@ const links = [
 export function SiteNav() {
   const { data: session } = useSession();
   const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 12);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   return (
-    <header className="absolute inset-x-0 top-0 z-50">
-      <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-5">
+    <header
+      className={cn(
+        "fixed inset-x-0 top-0 z-50 transition-colors duration-300",
+        scrolled || open
+          ? "border-b border-white/10 bg-black/80 backdrop-blur-xl"
+          : "border-b border-transparent bg-transparent"
+      )}
+    >
+      <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
         <Link
           href="/"
           className="font-display text-lg font-bold tracking-tight text-white"
@@ -42,7 +57,7 @@ export function SiteNav() {
           {session?.user ? (
             <Link
               href="/dashboard"
-              className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-white/90"
+              className="inline-flex items-center gap-2 rounded-full bg-copper px-4 py-2 text-sm font-semibold text-ink transition hover:bg-copper-bright"
             >
               <LayoutDashboard className="h-4 w-4" />
               Dashboard
@@ -59,7 +74,7 @@ export function SiteNav() {
               <button
                 type="button"
                 onClick={() => signIn("discord", { callbackUrl: "/dashboard" })}
-                className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-white/90"
+                className="rounded-full bg-copper px-4 py-2 text-sm font-semibold text-ink transition hover:bg-copper-bright"
               >
                 Open dashboard
               </button>
@@ -79,7 +94,7 @@ export function SiteNav() {
 
       <div
         className={cn(
-          "border-t border-white/10 bg-black/90 px-6 py-4 backdrop-blur md:hidden",
+          "border-t border-white/10 bg-black/95 px-6 py-4 backdrop-blur md:hidden",
           open ? "block" : "hidden"
         )}
       >
@@ -97,7 +112,7 @@ export function SiteNav() {
           {session?.user ? (
             <Link
               href="/dashboard"
-              className="mt-2 rounded-full bg-white px-4 py-2 text-center text-sm font-semibold text-black"
+              className="mt-2 rounded-full bg-copper px-4 py-2 text-center text-sm font-semibold text-ink"
             >
               Dashboard
             </Link>
@@ -105,7 +120,7 @@ export function SiteNav() {
             <button
               type="button"
               onClick={() => signIn("discord", { callbackUrl: "/dashboard" })}
-              className="mt-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-black"
+              className="mt-2 rounded-full bg-copper px-4 py-2 text-sm font-semibold text-ink"
             >
               Open dashboard
             </button>

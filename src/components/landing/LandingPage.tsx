@@ -143,21 +143,20 @@ export function LandingPage() {
               <p className="mb-4 text-xs font-semibold uppercase tracking-[0.24em] text-white/50">
                 Discord ticket control
               </p>
-              <h1 className="font-display text-[2.6rem] font-light leading-[1.05] tracking-[-0.03em] text-white sm:text-6xl lg:text-[4.1rem]">
-                Tickets that
+              <h1 className="font-display text-[2.6rem] font-semibold leading-[1.05] tracking-[-0.03em] text-white sm:text-6xl lg:text-[4.1rem]">
+                Configure tickets
                 <br />
-                keep moving
+                from one dashboard
               </h1>
               <p className="mt-6 max-w-md text-[0.98rem] leading-relaxed text-white/60 md:mt-7">
-                PX Ticket is the control booth for your Discord ticket bot —
-                panels, embeds, roles, and rules from one SaaS dashboard. Design
-                once, publish instantly.
+                PX Ticket is the web control panel for your Discord ticket bot —
+                panels, embeds, roles, and rules. Design once, publish instantly.
               </p>
               <div className="mt-8 flex flex-wrap items-center gap-3 md:mt-10">
                 {session?.user ? (
                   <Link
                     href="/dashboard"
-                    className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-medium text-black transition hover:bg-white/90"
+                    className="inline-flex items-center gap-2 rounded-full bg-copper px-6 py-3 text-sm font-semibold text-ink transition hover:bg-copper-bright"
                   >
                     Open dashboard
                     <ArrowRight className="h-4 w-4" />
@@ -168,7 +167,7 @@ export function LandingPage() {
                     onClick={() =>
                       signIn("discord", { callbackUrl: "/dashboard" })
                     }
-                    className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-medium text-black transition hover:bg-white/90"
+                    className="inline-flex items-center gap-2 rounded-full bg-copper px-6 py-3 text-sm font-semibold text-ink transition hover:bg-copper-bright"
                   >
                     Get started free
                     <ArrowRight className="h-4 w-4" />
@@ -176,7 +175,7 @@ export function LandingPage() {
                 )}
                 <a
                   href="#pricing"
-                  className="rounded-full border border-white/20 px-6 py-3 text-sm text-white/80 transition hover:border-white/40 hover:text-white"
+                  className="rounded-full border border-white/25 px-6 py-3 text-sm font-medium text-white transition hover:border-white/50 hover:bg-white/5"
                 >
                   See pricing
                 </a>
@@ -187,27 +186,40 @@ export function LandingPage() {
       </section>
 
       <section id="features" className="border-t border-white/10 bg-ink py-20">
-        <div className="mx-auto grid w-full max-w-6xl gap-6 px-6 md:grid-cols-3">
-          {features.map((feature, i) => (
-            <motion.div
-              key={feature.title}
-              initial={{ opacity: 0, y: 18 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-40px" }}
-              transition={{ delay: i * 0.08, duration: 0.45 }}
-              className="rounded-2xl border border-line bg-surface p-6"
-            >
-              <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-copper/15 text-copper">
-                <feature.icon className="h-5 w-5" />
-              </div>
-              <h2 className="font-display text-lg font-semibold text-cream">
-                {feature.title}
-              </h2>
-              <p className="mt-2 text-sm leading-relaxed text-muted">
-                {feature.body}
-              </p>
-            </motion.div>
-          ))}
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="mb-12 max-w-2xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stamp-bright">
+              Features
+            </p>
+            <h2 className="mt-3 font-display text-3xl font-bold text-cream sm:text-4xl">
+              Everything you need to run tickets from the web
+            </h2>
+          </div>
+          <div className="grid gap-6 md:grid-cols-3">
+            {features.map((feature, i) => (
+              <motion.div
+                key={feature.title}
+                initial={{ opacity: 0, y: 18 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-40px" }}
+                transition={{ delay: i * 0.08, duration: 0.45 }}
+                className="rounded-2xl border border-line bg-surface/60 p-6"
+              >
+                <div className="mb-4 flex items-center gap-3">
+                  <span className="font-display text-sm text-copper">
+                    0{i + 1}
+                  </span>
+                  <feature.icon className="h-5 w-5 text-cream" />
+                </div>
+                <h3 className="font-display text-lg font-semibold text-cream">
+                  {feature.title}
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted">
+                  {feature.body}
+                </p>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </section>
 
