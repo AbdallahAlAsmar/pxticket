@@ -100,7 +100,8 @@ async function proxy(
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to load guilds";
       const status = error instanceof BotApiError ? error.status : 500;
-      return NextResponse.json({ error: message }, { status });
+      const details = error instanceof BotApiError ? error.details : undefined;
+      return NextResponse.json({ error: message, details }, { status });
     }
   }
 
