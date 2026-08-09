@@ -284,13 +284,13 @@ export default function PanelEditorPage() {
         <div className="space-y-6">
           <Card className="space-y-4 p-6">
             <h2 className="font-display text-lg font-semibold">Basics</h2>
-            <Field label="Panel name">
+            <Field label="Panel name" required>
               <TextInput
                 value={panel.name || ""}
                 onChange={(e) => setPanel({ ...panel, name: e.target.value })}
               />
             </Field>
-            <Field label="Post channel" hint="Where the panel message will appear">
+            <Field label="Post channel" required hint="Where the panel message will appear">
               <SelectInput
                 value={panel.channelId || ""}
                 onChange={(e) => setPanel({ ...panel, channelId: e.target.value })}

@@ -305,7 +305,7 @@ export default function RulesPage() {
                       onChange={(e) => patchSelected({ name: e.target.value })}
                     />
                   </Field>
-                  <Field label="Channel">
+                  <Field label="Channel" required>
                     <SelectInput
                       value={selected.channelId || ""}
                       onChange={(e) =>
