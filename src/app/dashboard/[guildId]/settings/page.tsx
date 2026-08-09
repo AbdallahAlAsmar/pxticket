@@ -57,7 +57,7 @@ export default function SettingsPage() {
   async function save() {
     if (!settings) return;
     setSaving(true);
-    setMessage(null);
+    setMessage("Saving changes…");
     setError(null);
     try {
       const res = await fetch(`/api/bot/guilds/${guildId}/settings`, {

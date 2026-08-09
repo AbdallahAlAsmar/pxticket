@@ -140,7 +140,13 @@ export default function PanelsPage() {
                   onClick={() => toggle(panel)}
                 >
                   <Power className="h-4 w-4" />
-                  {panel.enabled ? "Disable" : "Enable"}
+                  {busyId === panel.id
+                    ? panel.enabled
+                      ? "Disabling…"
+                      : "Enabling…"
+                    : panel.enabled
+                      ? "Disable"
+                      : "Enable"}
                 </GhostButton>
                 <GhostButton
                   type="button"
@@ -148,7 +154,7 @@ export default function PanelsPage() {
                   onClick={() => publish(panel)}
                 >
                   <Send className="h-4 w-4" />
-                  Publish
+                  {busyId === panel.id ? "Publishing…" : "Publish"}
                 </GhostButton>
                 <Link href={`/dashboard/${guildId}/panels/${panel.id}`}>
                   <PrimaryButton type="button">Edit</PrimaryButton>

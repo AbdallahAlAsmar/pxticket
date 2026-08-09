@@ -156,7 +156,7 @@ export default function PanelEditorPage() {
 
   async function save(andPublish = false) {
     setSaving(true);
-    setMessage(null);
+    setMessage(andPublish ? "Saving and publishing…" : "Saving…");
     setError(null);
     try {
       if (!panel.name || !panel.channelId) {
@@ -203,6 +203,7 @@ export default function PanelEditorPage() {
       }
 
       if (andPublish) {
+        setMessage("Publishing to Discord…");
         const pub = await fetch(
           `/api/bot/guilds/${guildId}/panels/${savedId}/publish`,
           { method: "POST" }

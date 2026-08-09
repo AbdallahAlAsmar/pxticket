@@ -16,7 +16,7 @@ import {
   GhostButton,
 } from "@/components/ui/forms";
 import { FormSkeleton, PanelRowSkeleton } from "@/components/ui/skeleton";
-import type { RulesPanel } from "@/lib/types";
+import type { RulesItem, RulesPanel } from "@/lib/types";
 import {
   invalidateGuild,
   seedFromBootstrap,
@@ -24,6 +24,32 @@ import {
   useGuildRules,
 } from "@/lib/swr";
 import { mutate } from "swr";
+
+function makeTempPanel(name: string): RulesPanel {
+  return {
+    id: `temp-${Date.now()}`,
+    name,
+    channelId: null,
+    messageId: null,
+    rulesTitle: "Server Rules",
+    rulesDescription: "Select a rule below to view it.",
+    rulesColor: "2B2D31",
+    rulesImage: null,
+    rulesAuthorName: null,
+    rulesAuthorIcon: null,
+    rules: [],
+  };
+}
+
+function makeTempRule(index: number): RulesItem {
+  return {
+    id: `temp-rule-${Date.now()}`,
+    name: `Rule ${index}`,
+    embedTitle: `Rule ${index}`,
+    embedDescription: "Add your rule details here.",
+    embedColor: "0099ff",
+  };
+}
 
 export default function RulesPage() {
   const params = useParams();
@@ -98,26 +124,36 @@ export default function RulesPage() {
   }
 
   async function createPanel() {
+    setSaving(true);
     setError(null);
+    const draftName = newName || "Rules";
+    const tempPanel = makeTempPanel(draftName);
+    setPanels((prev) => [...prev, tempPanel]);
+    setSelectedId(tempPanel.id);
+    setMessage("Creating panel…");
     const res = await fetch(`/api/bot/guilds/${guildId}/rules/panels`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: newName || "Rules" }),
+      body: JSON.stringify({ name: draftName }),
     });
     const data = await res.json();
     if (!res.ok) {
+      setPanels((prev) => prev.filter((p) => p.id !== tempPanel.id));
+      setSelectedId((prev) => (prev === tempPanel.id ? null : prev));
       setError(data.error || "Failed to create");
+      setSaving(false);
       return;
     }
     await refreshRules(data.config.panels);
     setSelectedId(data.panel.id);
     setNewName("");
+    setSaving(false);
   }
 
   async function save() {
     if (!selected) return;
     setSaving(true);
-    setMessage(null);
+    setMessage("Saving rules panel…");
     setError(null);
     try {
       const res = await fetch(
@@ -132,8 +168,10 @@ export default function RulesPage() {
       if (!res.ok) throw new Error(data.error);
       await refreshRules(data.config.panels);
       setMessage("Rules panel saved.");
+      return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
+      return false;
     } finally {
       setSaving(false);
     }
@@ -141,10 +179,11 @@ export default function RulesPage() {
 
   async function publish() {
     if (!selected) return;
-    setSaving(true);
-    setError(null);
     try {
-      await save();
+      const saved = await save();
+      if (!saved) return;
+      setSaving(true);
+      setMessage("Publishing rules panel…");
       const res = await fetch(
         `/api/bot/guilds/${guildId}/rules/panels/${selected.id}/publish`,
         { method: "POST" }
@@ -165,6 +204,12 @@ export default function RulesPage() {
 
   async function addRule() {
     if (!selected) return;
+    setSaving(true);
+    const tempRule = makeTempRule((selected.rules?.length || 0) + 1);
+    setPanels((prev) =>
+      prev.map((p) => (p.id === selected.id ? { ...p, rules: [...p.rules, tempRule] } : p))
+    );
+    setMessage("Adding rule…");
     const res = await fetch(
       `/api/bot/guilds/${guildId}/rules/panels/${selected.id}/rules`,
       {
@@ -175,12 +220,21 @@ export default function RulesPage() {
     );
     const data = await res.json();
     if (!res.ok) {
+      setPanels((prev) =>
+        prev.map((p) =>
+          p.id === selected.id
+            ? { ...p, rules: p.rules.filter((rule) => rule.id !== tempRule.id) }
+            : p
+        )
+      );
       setError(data.error);
+      setSaving(false);
       return;
     }
     setPanels((prev) =>
       prev.map((p) => (p.id === selected.id ? data.panel : p))
     );
+    setSaving(false);
   }
 
   async function updateRule(
@@ -233,7 +287,7 @@ export default function RulesPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <GhostButton type="button" disabled={!selected || saving} onClick={save}>
+              <GhostButton type="button" disabled={!selected || saving} onClick={save}>
             <Save className="h-4 w-4" />
             Save
           </GhostButton>
@@ -284,7 +338,7 @@ export default function RulesPage() {
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
               />
-              <GhostButton type="button" onClick={createPanel}>
+              <GhostButton type="button" disabled={saving} onClick={createPanel}>
                 <Plus className="h-4 w-4" />
                 Add panel
               </GhostButton>
@@ -374,7 +428,7 @@ export default function RulesPage() {
                 <Card className="space-y-4 p-6">
                   <div className="flex items-center justify-between">
                     <h2 className="font-display text-lg font-semibold">Rules</h2>
-                    <GhostButton type="button" onClick={addRule}>
+                    <GhostButton type="button" disabled={saving} onClick={addRule}>
                       <Plus className="h-4 w-4" />
                       Add rule
                     </GhostButton>
