@@ -546,7 +546,7 @@ export default function PanelEditorPage() {
           </Card>
         </div>
 
-        <div className="xl:sticky xl:top-8 xl:self-start">
+        <div className="xl:sticky xl:top-6 xl:self-start xl:max-h-[calc(100vh-3rem)] xl:overflow-y-auto">
           <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-muted">
             Live preview
           </p>

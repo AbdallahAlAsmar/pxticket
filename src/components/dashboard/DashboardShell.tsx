@@ -122,7 +122,7 @@ export function DashboardShell({
         </div>
       </aside>
 
-      <main className="flex-1 overflow-x-hidden">
+      <main className="min-w-0 flex-1 overflow-x-clip">
         <div className="mx-auto w-full max-w-6xl px-6 py-8">{children}</div>
       </main>
     </div>
