@@ -67,6 +67,9 @@ async function refreshDiscordAccessToken(token: DiscordToken): Promise<DiscordTo
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     Discord({
+      // Discord includes `iss=https://discord.com` in OAuth callbacks; set the
+      // expected issuer so Auth.js does not compare it with its generic fallback.
+      issuer: "https://discord.com",
       clientId: process.env.DISCORD_CLIENT_ID!,
       clientSecret: process.env.DISCORD_CLIENT_SECRET!,
       authorization: {
