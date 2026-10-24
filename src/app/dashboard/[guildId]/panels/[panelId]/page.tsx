@@ -16,6 +16,7 @@ import {
   GhostButton,
 } from "@/components/ui/forms";
 import { FormSkeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import type { PanelCategory, TicketPanel } from "@/lib/types";
 import {
   invalidateGuild,
@@ -67,6 +68,14 @@ export default function PanelEditorPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit');
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 1024);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   const channels = bootstrap?.channels || [];
   const roles = bootstrap?.roles || [];
@@ -261,6 +270,33 @@ export default function PanelEditorPage() {
         </div>
       </div>
 
+      {isMobile && (
+        <div className="mb-4 flex border-b border-line md:hidden">
+          <button
+            onClick={() => setActiveTab('edit')}
+            className={cn(
+              "flex-1 py-2 text-sm font-medium border-b-2 transition",
+              activeTab === 'edit'
+                ? "border-copper text-copper-bright"
+                : "text-muted border-transparent"
+            )}
+          >
+            Edit
+          </button>
+          <button
+            onClick={() => setActiveTab('preview')}
+            className={cn(
+              "flex-1 py-2 text-sm font-medium border-b-2 transition",
+              activeTab === 'preview'
+                ? "border-copper text-copper-bright"
+                : "text-muted border-transparent"
+            )}
+          >
+            Preview
+          </button>
+        </div>
+      )}
+
       {message ? (
         <p className="mb-4 rounded-xl border border-ok/30 bg-ok/10 px-4 py-3 text-sm text-ok">
           {message}
@@ -274,15 +310,17 @@ export default function PanelEditorPage() {
 
       {loading ? (
         <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-          <div className="space-y-6">
+          <div className={cn("space-y-6", isMobile && activeTab === 'preview' && 'hidden')}>
             <FormSkeleton />
             <FormSkeleton />
           </div>
-          <FormSkeleton />
+          <div className={cn("", isMobile && activeTab === 'edit' && 'hidden')}>
+            <FormSkeleton />
+          </div>
         </div>
       ) : (
       <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        <div className="space-y-6">
+        <div className={cn("space-y-6", isMobile && activeTab === 'preview' && 'hidden')}>
           <Card className="space-y-4 p-6">
             <h2 className="font-display text-lg font-semibold">Basics</h2>
             <Field label="Panel name" required>
@@ -546,7 +584,7 @@ export default function PanelEditorPage() {
           </Card>
         </div>
 
-        <div className="xl:sticky xl:top-6 xl:self-start xl:max-h-[calc(100vh-3rem)] xl:overflow-y-auto">
+        <div className={cn("xl:sticky xl:top-6 xl:self-start xl:max-h-[calc(100vh-3rem)] xl:overflow-y-auto", isMobile && activeTab === 'edit' && 'hidden')}>
           <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-muted">
             Live preview
           </p>
