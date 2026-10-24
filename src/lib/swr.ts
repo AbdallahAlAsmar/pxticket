@@ -29,8 +29,8 @@ async function fetcher<T>(url: string): Promise<T> {
 
 export function useGuilds() {
   return useSWR<{ guilds: GuildSummary[] }>("/api/bot/guilds", fetcher, {
-    revalidateOnFocus: false,
-    dedupingInterval: 30_000,
+    revalidateOnFocus: true,
+    dedupingInterval: 5_000,
   });
 }
 

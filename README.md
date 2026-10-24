@@ -5,7 +5,7 @@ Web control panel for the Discord ticket bot. Hosted at [pxticket.vercel.app](ht
 ## Features
 
 - Discord OAuth login (admin / manage-server only)
-- Server list where the bot is present
+- Servers you own or can manage, with PX Ticket servers first and one-click bot invites for other servers
 - Live Discord embed preview while editing
 - Create / edit / publish ticket panels (categories, roles, questions)
 - Rules panels with publish

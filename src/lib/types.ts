@@ -12,8 +12,10 @@ export type GuildSummary = {
   memberCount?: number;
   ownerId?: string;
   permissions?: string;
+  permissionLabel?: "Owner" | "Administrator" | "Manage Server";
   botPresent?: boolean;
   canManage?: boolean;
+  inviteUrl?: string | null;
 };
 
 export type ChannelInfo = {

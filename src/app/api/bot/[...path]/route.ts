@@ -7,6 +7,7 @@ import {
   setCached,
 } from "@/lib/rate-limit";
 import { hasGuildAdmin } from "@/lib/utils";
+import { mergeDashboardGuilds } from "@/lib/guild-list";
 import { NextResponse } from "next/server";
 
 async function assertCanManage(
@@ -126,6 +127,13 @@ async function proxy(
         });
       }
 
+      if (!session.accessToken) {
+        throw new BotApiError(
+          "Your Discord session has no guild access. Sign out and sign back in.",
+          401
+        );
+      }
+
       const [botData, userGuilds] = await Promise.all([
         botFetch<{
           guilds: Array<{
@@ -135,55 +143,18 @@ async function proxy(
             memberCount?: number;
           }>;
         }>("/guilds"),
-        session.accessToken
-          ? fetchUserGuilds(session.accessToken).catch(() => [])
-          : Promise.resolve([]),
+        fetchUserGuilds(session.accessToken),
       ]);
 
-      const botIds = new Set(botData.guilds.map((g) => g.id));
-      const manageable = userGuilds.filter(
-        (g) => botIds.has(g.id) && (g.owner || hasGuildAdmin(g.permissions))
-      );
-
-      let guilds = manageable.map((g) => {
-        const botGuild = botData.guilds.find((b) => b.id === g.id);
-        return {
-          id: g.id,
-          name: g.name,
-          icon: g.icon,
-          permissions: g.permissions,
-          botPresent: true,
-          canManage: true,
-          memberCount: botGuild?.memberCount,
-        };
-      });
-
-      if (!guilds.length && botData.guilds.length) {
-        const checks = await Promise.all(
-          botData.guilds.map(async (g) => {
-            try {
-              const result = await botFetch<{ canManage: boolean }>(
-                `/guilds/${g.id}/can-manage/${session.user.id}`
-              );
-              return result.canManage ? g : null;
-            } catch {
-              return null;
-            }
-          })
-        );
-        guilds = checks.filter(Boolean).map((g) => ({
-          id: g!.id,
-          name: g!.name,
-          icon: g!.icon,
-          permissions: "",
-          botPresent: true,
-          canManage: true,
-          memberCount: g!.memberCount,
-        }));
+      const clientId = process.env.DISCORD_CLIENT_ID;
+      if (!clientId) {
+        throw new BotApiError("DISCORD_CLIENT_ID is not configured.", 500);
       }
 
-      const payload = { guilds };
-      setCached(cacheKey, payload, 200, 20_000);
+      const payload = {
+        guilds: mergeDashboardGuilds(userGuilds, botData.guilds, clientId),
+      };
+      setCached(cacheKey, payload, 200, 5_000);
       return NextResponse.json(payload, { headers: { "X-Cache": "MISS" } });
     }
 
