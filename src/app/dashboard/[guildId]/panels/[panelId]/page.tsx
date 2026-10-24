@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Plus, Trash2, Send, Save } from "lucide-react";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
@@ -70,12 +70,46 @@ export default function PanelEditorPage() {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit');
   const [isMobile, setIsMobile] = useState(false);
+  const [tabStyle, setTabStyle] = useState<React.CSSProperties>({});
+  const tabRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 1024);
+    const check = () => {
+      setIsMobile(window.innerWidth < 1024);
+    };
     check();
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
   }, []);
+
+  useEffect(() => {
+    if (!isMobile) {
+      setTabStyle({});
+      return;
+    }
+    const el = tabRef.current;
+    if (!el) return;
+
+    const update = () => {
+      const rect = el.getBoundingClientRect();
+      const headerHeight = 56; // mobile header height in DashboardShell
+      setTabStyle({
+        position: 'fixed',
+        top: headerHeight,
+        left: 0,
+        right: 0,
+        zIndex: 20,
+        background: 'var(--ink)',
+      });
+    };
+    update();
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    return () => {
+      window.removeEventListener('scroll', update);
+      window.removeEventListener('resize', update);
+    };
+  }, [isMobile]);
 
   const channels = bootstrap?.channels || [];
   const roles = bootstrap?.roles || [];
@@ -271,7 +305,11 @@ export default function PanelEditorPage() {
       </div>
 
       {isMobile && (
-        <div className="mb-4 flex border-b border-line md:hidden sticky top-0 z-10 bg-ink/95 backdrop-blur-sm">
+        <div
+          ref={tabRef}
+          style={tabStyle}
+          className="mb-4 flex border-b border-line md:hidden"
+        >
           <button
             onClick={() => setActiveTab('edit')}
             className={cn(
