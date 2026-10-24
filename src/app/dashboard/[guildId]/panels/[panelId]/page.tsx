@@ -234,9 +234,9 @@ export default function PanelEditorPage() {
 
   return (
     <DashboardShell guildId={guildId} guildName={guildName}>
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+      <div className="mb-4 md:mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-3xl font-bold text-cream">
+          <h1 className="font-display text-2xl sm:text-3xl font-bold text-cream">
             {isNew ? "New panel" : panel.name || "Edit panel"}
           </h1>
           <p className="mt-2 text-sm text-muted">

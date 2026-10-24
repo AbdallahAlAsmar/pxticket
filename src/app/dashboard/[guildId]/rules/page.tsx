@@ -279,9 +279,9 @@ export default function RulesPage() {
 
   return (
     <DashboardShell guildId={guildId} guildName={guildName}>
-      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+      <div className="mb-4 md:mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-3xl font-bold text-cream">Rules</h1>
+          <h1 className="font-display text-2xl sm:text-3xl font-bold text-cream">Rules</h1>
           <p className="mt-2 text-sm text-muted">
             Build rules menus with live embed previews.
           </p>
@@ -316,7 +316,7 @@ export default function RulesPage() {
         </div>
       ) : (
         <>
-          <div className="mb-6 flex flex-wrap gap-2">
+          <div className="mb-4 flex flex-wrap gap-2">
             {panels.map((p) => (
               <button
                 key={p.id}
@@ -331,8 +331,8 @@ export default function RulesPage() {
                 {p.name}
               </button>
             ))}
-            <div className="flex gap-2">
-              <TextInput
+            <div className="flex flex-wrap gap-2">
+                        <TextInput
                 className="!w-40"
                 placeholder="New panel name"
                 value={newName}

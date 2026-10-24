@@ -75,8 +75,8 @@ export default function GuildOverviewPage() {
 
   return (
     <DashboardShell guildId={guildId} guildName={data?.guild.name}>
-      <div className="mb-8">
-        <h1 className="font-display text-3xl font-bold text-cream">
+      <div className="mb-6 md:mb-8">
+        <h1 className="font-display text-2xl sm:text-3xl font-bold text-cream">
           {data?.guild.name || (isLoading ? "Loading…" : "Server")}
         </h1>
         <p className="mt-2 text-sm text-muted">
@@ -93,7 +93,7 @@ export default function GuildOverviewPage() {
       {isLoading && !data ? (
         <StatsSkeleton />
       ) : (
-        <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mb-6 md:mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {stats.map((stat, i) => (
             <motion.div
               key={stat.label}
@@ -101,14 +101,14 @@ export default function GuildOverviewPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
             >
-              <Card className="p-5">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs uppercase tracking-wider text-muted">
-                    {stat.label}
-                  </p>
-                  <stat.icon className={`h-4 w-4 ${stat.color}`} />
-                </div>
-                <p className="mt-3 font-display text-3xl font-bold text-cream">
+              <Card key={stat.label} className="p-4 sm:p-5">
+                                <div className="flex items-center justify-between">
+                                  <p className="text-xs uppercase tracking-wider text-muted">
+                                    {stat.label}
+                                  </p>
+                                  <stat.icon className={`h-4 w-4 ${stat.color}`} />
+                                </div>
+                                <p className="mt-2 sm:mt-3 font-display text-2xl sm:text-3xl font-bold text-cream">
                   {stat.value}
                 </p>
               </Card>
@@ -117,19 +117,23 @@ export default function GuildOverviewPage() {
         </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
         {links.map((link) => (
-          <Link
-            key={link.href}
-            href={link.href}
-            className="focus-ring group rounded-2xl border border-line bg-surface p-5 transition hover:border-copper/40"
-          >
-            <link.icon className="mb-3 h-5 w-5 text-copper" />
-            <h2 className="font-display text-lg font-semibold text-cream group-hover:text-copper-bright">
-              {link.title}
-            </h2>
-            <p className="mt-2 text-sm text-muted">{link.body}</p>
-          </Link>
+          <Card key={link.href} className="p-4 sm:p-5 transition hover:border-copper/40 hover:bg-surface-2">
+                              <div className="flex items-start gap-3">
+                                <div className="mt-0.5 shrink-0 inline-flex h-9 w-9 items-center justify-center rounded-xl bg-copper/15 text-copper">
+                                  <link.icon className="h-5 w-5" />
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="font-display text-base font-semibold text-cream group-hover:text-copper-bright">
+                                    {link.title}
+                                  </p>
+                                  <p className="mt-1 text-sm text-muted">
+                                    {link.body}
+                                  </p>
+                                </div>
+                              </div>
+                            </Card>
         ))}
       </div>
     </DashboardShell>

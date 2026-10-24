@@ -58,7 +58,7 @@ export function FormSkeleton() {
 
 export function StatsSkeleton() {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       {[1, 2, 3, 4].map((i) => (
         <div key={i} className="rounded-2xl border border-line bg-surface p-5">
           <Skeleton className="mb-3 h-3 w-20" />

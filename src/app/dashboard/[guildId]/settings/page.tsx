@@ -92,9 +92,9 @@ export default function SettingsPage() {
 
   return (
     <DashboardShell guildId={guildId} guildName={guildName}>
-      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+      <div className="mb-6 md:mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-3xl font-bold text-cream">Settings</h1>
+          <h1 className="font-display text-2xl sm:text-3xl font-bold text-cream">Settings</h1>
           <p className="mt-2 text-sm text-muted">
             Global ticket behavior for this server.
           </p>
@@ -116,7 +116,7 @@ export default function SettingsPage() {
       ) : null}
 
       {loading ? (
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2">
           <FormSkeleton />
           <FormSkeleton />
         </div>
@@ -125,8 +125,8 @@ export default function SettingsPage() {
           Could not load settings.
         </Card>
       ) : (
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Card className="space-y-5 p-6">
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card className="space-y-4 p-4 sm:p-6">
             <h2 className="font-display text-lg font-semibold">Channels & language</h2>
             <Field label="Log channel">
               <SelectInput
@@ -173,7 +173,7 @@ export default function SettingsPage() {
             </Field>
           </Card>
 
-          <Card className="space-y-5 p-6">
+          <Card className="space-y-4 p-4 sm:p-6">
             <h2 className="font-display text-lg font-semibold">Embed defaults & emojis</h2>
             <Field label="Default embed color">
               <div className="flex gap-3">

@@ -67,7 +67,7 @@ function GuildCard({ guild }: { guild: GuildSummary }) {
 
 function GuildGrid({ guilds }: { guilds: GuildSummary[] }) {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {guilds.map((guild, index) => (
         <motion.div key={guild.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.04 }}>
           <GuildCard guild={guild} />
@@ -89,9 +89,9 @@ export default function DashboardPage() {
 
   return (
     <DashboardShell>
-      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+      <div className="mb-6 md:mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-3xl font-bold text-cream">Your servers</h1>
+          <h1 className="font-display text-2xl sm:text-3xl font-bold text-cream">Your servers</h1>
           <p className="mt-2 text-sm text-muted">
             Servers you own or can manage. PX Ticket servers appear first; select another server to invite the bot.
           </p>
@@ -103,7 +103,7 @@ export default function DashboardPage() {
       </div>
 
       {isLoading && !data ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
             <ServerCardSkeleton key={i} />
           ))}

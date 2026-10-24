@@ -72,9 +72,9 @@ export default function PanelsPage() {
 
   return (
     <DashboardShell guildId={guildId} guildName={guildName}>
-      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+      <div className="mb-6 md:mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-3xl font-bold text-cream">Panels</h1>
+          <h1 className="font-display text-2xl sm:text-3xl font-bold text-cream">Panels</h1>
           <p className="mt-2 text-sm text-muted">
             Design ticket panels and publish them into Discord channels.
           </p>
@@ -109,7 +109,7 @@ export default function PanelsPage() {
       ) : (
         <div className="space-y-3">
           {panels.map((panel) => (
-            <Card key={panel.id} className="flex flex-wrap items-center gap-4 p-5">
+            <Card key={panel.id} className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 sm:p-5">
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <Link
