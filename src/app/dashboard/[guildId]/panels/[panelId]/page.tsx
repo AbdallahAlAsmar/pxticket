@@ -271,7 +271,7 @@ export default function PanelEditorPage() {
       </div>
 
       {isMobile && (
-        <div className="mb-4 flex border-b border-line md:hidden">
+        <div className="mb-4 flex border-b border-line md:hidden sticky top-0 z-10 bg-ink/95 backdrop-blur-sm">
           <button
             onClick={() => setActiveTab('edit')}
             className={cn(
