@@ -32,11 +32,11 @@ Fill `.env.local` with Discord application OAuth credentials and the bot API URL
 
 ### Bot side (shared host — same as bot_control)
 
-`bot_control` owns the only public port (`21024` on `fi7.bot-hosting.net`).
+The web API listens on Bot-Hosting's injected `SERVER_PORT` (25011) bound to `0.0.0.0`. The public HTTPS origin is `https://noxes.apps.bot-hosting.cloud` (do not add `:25011`).
 
-`ticket_bot` listens on **localhost only** (`127.0.0.1:3847`). `bot_control` proxies:
+`ticket_bot` listens on **localhost only** (`127.0.0.1:3847`). The license API (or bot_control if enabled) proxies:
 
-`https://fi7.bot-hosting.net:21024/ticket-api/*` → `http://127.0.0.1:3847/*`
+`https://noxes.apps.bot-hosting.cloud/ticket-api/*` → `http://127.0.0.1:3847/*`
 
 In `ticket_bot/.env`:
 
@@ -49,7 +49,7 @@ DASHBOARD_API_PORT=3847
 In Vercel / `.env.local`:
 
 ```env
-BOT_API_URL=https://fi7.bot-hosting.net:21024/ticket-api
+BOT_API_URL=https://noxes.apps.bot-hosting.cloud/ticket-api
 BOT_API_SECRET=long_random_string
 ```
 

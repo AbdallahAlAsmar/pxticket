@@ -1,7 +1,6 @@
-# Cloudflare Worker (required for Vercel)
+# Optional Cloudflare Worker fallback
 
-Vercel serverless functions can only make outbound requests to ports **80** and **443**.
-`http://fi7.bot-hosting.net:21024` works from your PC, but **fails on Vercel** (`fetch failed`, no outgoing requests).
+The normal Vercel configuration should call the HTTPS custom domain directly; the Worker is only a fallback if that route is unavailable.
 
 ## 1. Create the Worker
 
@@ -9,19 +8,26 @@ Vercel serverless functions can only make outbound requests to ports **80** and 
 2. Replace the default code with [`ticket-api-proxy.js`](./ticket-api-proxy.js)
 3. **Deploy**
 4. Settings → Variables → add:
-   - `UPSTREAM` = `http://fi7.bot-hosting.net:21024`
+   - `UPSTREAM` = `https://noxes.apps.bot-hosting.cloud`
 5. Copy your worker URL, e.g. `https://pxticket-api.YOUR_SUBDOMAIN.workers.dev`
 
-## 2. Point Vercel at the Worker
+## 2. Use the direct URL (preferred)
+
+Set this in Vercel and redeploy:
 
 ```env
-BOT_API_URL=https://pxticket-api.YOUR_SUBDOMAIN.workers.dev/ticket-api
+BOT_API_URL=https://noxes.apps.bot-hosting.cloud/ticket-api
 BOT_API_SECRET=<same as ticket_bot DASHBOARD_API_SECRET>
 ```
 
-Redeploy Vercel after saving.
+If the direct custom domain is inaccessible from Vercel, deploy this Worker and set `UPSTREAM` as above. Then use the worker URL instead:
+
+```env
+BOT_API_URL=https://YOUR_WORKER.workers.dev/ticket-api
+BOT_API_SECRET=<same as ticket_bot DASHBOARD_API_SECRET>
+```
 
 ## 3. Verify
 
-- Worker: `https://YOUR_WORKER.workers.dev/ticket-api/health`
+- Bot API: `https://noxes.apps.bot-hosting.cloud/ticket-api/health`
 - Site: `https://pxticket.vercel.app/api/status`

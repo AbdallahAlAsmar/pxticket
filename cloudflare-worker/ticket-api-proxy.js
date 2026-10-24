@@ -1,11 +1,11 @@
 /**
- * Cloudflare Worker — bridges Vercel (ports 80/443 only) → bot-hosting :21024
+ * Optional Cloudflare Worker fallback for the bot-hosting HTTPS custom domain.
  *
  * Deploy: https://dash.cloudflare.com → Workers → Create → paste this file
  * Route: *.workers.dev is fine
  *
  * Env vars (Worker Settings → Variables):
- *   UPSTREAM = http://fi7.bot-hosting.net:21024
+ *   UPSTREAM = https://noxes.apps.bot-hosting.cloud
  *
  * Then set on Vercel:
  *   BOT_API_URL = https://YOUR_WORKER.workers.dev/ticket-api
@@ -13,7 +13,7 @@
 
 export default {
   async fetch(request, env) {
-    const upstreamBase = (env.UPSTREAM || "http://fi7.bot-hosting.net:21024").replace(
+    const upstreamBase = (env.UPSTREAM || "https://noxes.apps.bot-hosting.cloud").replace(
       /\/+$/,
       ""
     );

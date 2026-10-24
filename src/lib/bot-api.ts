@@ -24,7 +24,7 @@ function assertBotConfig() {
   }
   if (!BOT_API_URL) {
     throw new BotApiError(
-      "BOT_API_URL is not configured in Vercel. Set it to your Cloudflare Worker URL (https://….workers.dev/ticket-api). Direct :21024 URLs fail because Vercel only allows outbound ports 80/443.",
+      "BOT_API_URL is not configured in Vercel. Set it to https://noxes.apps.bot-hosting.cloud/ticket-api.",
       500
     );
   }
@@ -38,7 +38,7 @@ function assertBotConfig() {
 
   if (parsed.port && parsed.port !== "80" && parsed.port !== "443") {
     throw new BotApiError(
-      `Vercel cannot reach ${parsed.host} — outbound ports other than 80/443 are blocked (this is why fetch failed). Deploy cloudflare-worker/ticket-api-proxy.js and set BOT_API_URL=https://YOUR_SUBDOMAIN.workers.dev/ticket-api`,
+      `Vercel cannot reach ${parsed.host} — use the HTTPS custom domain without a custom port: https://noxes.apps.bot-hosting.cloud/ticket-api`,
       500,
       { host: parsed.host, port: parsed.port }
     );
@@ -78,7 +78,7 @@ export async function botFetch<T = unknown>(
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new BotApiError(
-      `Could not reach bot API at ${BOT_API_URL} (${message}). If this uses port 21024, Vercel blocks it — use the Cloudflare Worker proxy.`,
+      `Could not reach bot API at ${BOT_API_URL} (${message}). Check that the host binds to SERVER_PORT=25011 on 0.0.0.0 and the custom domain routes to the running app.`,
       502,
       { url: BOT_API_URL }
     );

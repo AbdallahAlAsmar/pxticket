@@ -48,7 +48,7 @@ export async function GET() {
     botApiPort: port,
     nonStandardPort,
     warning: nonStandardPort
-      ? "Vercel blocks outbound fetch to ports other than 80/443. Use the Cloudflare Worker proxy (see cloudflare-worker/) and set BOT_API_URL to https://YOUR_WORKER.workers.dev/ticket-api"
+      ? "Use the HTTPS custom domain without a custom port: https://noxes.apps.bot-hosting.cloud/ticket-api"
       : urlError,
     upstream,
   });
